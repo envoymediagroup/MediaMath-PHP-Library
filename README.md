@@ -9,6 +9,24 @@ anyone wishing to integrate with the MediaMath API.
 * PHP Curl
 * MediaMath API Credentials
 
+# Overview
+
+Every class in this library is under the MediaMathAPI folder. Every class immediately inherits the following
+public methods:
+
+### Get Methods
+
+* fetch - Fetch the details for a specific record as specified by id
+* fetchAll - Fetch an associative array keyed by id of all the records available
+* fetchAllDetail - Fetch an associative array keyed by id of all the records available and do additional calls to fetch the full details for each record
+
+### Set Methods
+
+* create - Create a new record
+* modify - Modify an existing record. The MediaMath API makes use of a field named version to protect against simultaneous overwrite. You can pass the version field in with the array to this method, or if you have auto_version enabled in MediaMathAPI.php the library will automatically fetch the most recent version for you.
+
+Additionally, the input and output for all of these methods is associative arrays. The exception being fetch which requires an integer value for the id to be passed in
+
 # Examples
 
 List all the current advertisers
