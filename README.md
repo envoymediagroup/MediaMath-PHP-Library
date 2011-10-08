@@ -11,8 +11,7 @@ anyone wishing to integrate with the MediaMath API.
 
 # Overview
 
-Every class in this library is under the MediaMathAPI folder. Every class immediately inherits the following
-public methods:
+Every class in this library is under the MediaMathAPI folder. Every class immediately inherits the following public methods:
 
 ### Get Methods
 
