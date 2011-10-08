@@ -25,7 +25,18 @@ public methods:
 * create - Create a new record
 * modify - Modify an existing record. The MediaMath API makes use of a field named version to protect against simultaneous overwrite. You can pass the version field in with the array to this method, or if you have auto_version enabled in MediaMathAPI.php the library will automatically fetch the most recent version for you.
 
-Additionally, the input and output for all of these methods is associative arrays. The exception being fetch which requires an integer value for the id to be passed in
+### I/O
+
+The input and output for all of these methods is associative arrays. The exception being fetch which requires an integer value for the id to be passed in
+
+### Debugging
+
+This library has two modes for debugging: 1 or 2. You set the debugging flag when you construct the MediaMathAPI object like this:
+
+    $API = new MediaMathAPI(1);
+
+* Debug Level 1: This level will print out extra detail for what is going on in all the methods
+* Debug Level 2: This level gives you all the output of level 1 and additionally outputs the CURL headers and MediaMath raw responses involved.
 
 # Examples
 
