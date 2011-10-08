@@ -73,5 +73,5 @@ the correct version number for you.
         'status' => 'off',
         'version' => 1
     );
-    print_r($API->Creatives->create($creative));
+    print_r($API->Creatives->modify($creative));
     ?>
