@@ -5,9 +5,9 @@ anyone wishing to integrate with the MediaMath API.
 
 # Requirements
 
-PHP 5.2+
-PHP Curl
-MediaMath API Credentials
+* PHP 5.2+
+* PHP Curl
+* MediaMath API Credentials
 
 # Examples
 
