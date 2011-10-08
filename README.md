@@ -34,6 +34,12 @@ This library has two modes for debugging: 1 or 2. You set the debugging flag whe
 
     $API = new MediaMathAPI(1);
 
+Additionally, you may set the debugging flag by calling the setDebugLevel method like this:
+
+    $API->setDebugLevel(2);
+
+Here is some more info on what the debug levels do:
+
 * Debug Level 1: This level will print out extra detail for what is going on in all the methods
 * Debug Level 2: This level gives you all the output of level 1 and additionally outputs the CURL headers and MediaMath raw responses involved.
 
