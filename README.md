@@ -12,6 +12,8 @@ MediaMath API Credentials
 # Examples
 
 List all the current advertisers
+--------------------------------
+
     <?php
     $API = new MediaMathAPI();
     $API->login('mm_api_username','mm_api_password');
@@ -19,6 +21,8 @@ List all the current advertisers
     ?>
 
 List all the current advertisers with full details for each
+-----------------------------------------------------------
+
     <?php
     $API = new MediaMathAPI();
     $API->login('mm_api_username','mm_api_password');
@@ -26,9 +30,12 @@ List all the current advertisers with full details for each
     ?>
 
 Create a creative
+-----------------
+
 Note: All of the objects follow the same format where you pass in an array that you
 would like sent to the API. Please visit: https://kb.mediamath.com/wiki/display/APID/API+Documentation+Home
 to learn more about all the objects and methods available.
+
     <?php
     $API = new MediaMathAPI();
     $API->login('mm_api_username','mm_api_password');
@@ -53,8 +60,11 @@ to learn more about all the objects and methods available.
     ?>
 
 Modify a creative
+-----------------
+
 Note: If you leave out version and have auto_version on then the library will automatically fetch
 the correct version number for you.
+
     <?php
     $API = new MediaMathAPI();
     $API->login('mm_api_username','mm_api_password');
