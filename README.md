@@ -1,6 +1,6 @@
 # MediaMath PHP Library
 
-The goal for this project is to proved a versatile, easy to use PHP library for
+The goal for this project is to provide a versatile, easy to use PHP library for
 anyone wishing to integrate with the MediaMath API.
 
 # Requirements
