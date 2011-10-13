@@ -116,5 +116,10 @@ class MediaMathAPI_Strategies extends MediaMathAPI {
 	}
 	return $orig_response;
     }
+    
+    public function delete($args) {
+	$args['status'] = 'off';
+	return parent::modify($args);
+    }
 
 }

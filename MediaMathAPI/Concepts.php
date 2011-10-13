@@ -3,4 +3,8 @@
 class MediaMathAPI_Concepts extends MediaMathAPI {
     public $method = 'concepts';
     
+    public function delete($args) {
+	$args['status'] = 'off';
+	return parent::modify($args);
+    }
 }
