@@ -23,7 +23,7 @@ Every class in this library is under the MediaMathAPI folder. Every class immedi
 
 * create - Create a new record
 * modify - Modify an existing record. The MediaMath API makes use of a field named version to protect against simultaneous overwrite. You can pass the version field in with the array to this method, or if you have auto_version enabled in MediaMathAPI.php and you leave the version field out of the array you pass this method, the library will automatically fetch the most recent version for you.
-* delete - Delete a record. Almost everything in the API is not deletable and will give an error if you try. The exception is subobjects for Strategies. The relationship of things like Concepts and DayParts to strategies are deletable.
+* delete - Delete a record. Almost everything in the API is not deletable and will give an error if you try. Therefore, in many cases, if you try to delete an object that is not deletable the library will set status=off for you. The exception is subobjects for Strategies. The relationship of things like Concepts and DayParts to strategies are deletable.
 
 ### I/O
 
