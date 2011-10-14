@@ -91,9 +91,15 @@ class MediaMathAPI {
         self::$_debug_level = $debug_level;
     }
 
-    public function login($username, $password) {
+    public function login($username, $password, $api_key='') {
+	$args = Array('user' => $username, 'password' => $password);
+	if ($api_key) {
+	    //The api_key variable is only required for production accounts
+	    //For the sandbox this is not necessary.
+	    $args['api_key'] = $api_key;
+	}
         $response = Array();
-        $response = $this->call('login', Array('user' => $username, 'password' => $password));
+        $response = $this->call('login', $args);
         if ($response['status_attr']['code'] != 'ok') {
             if (self::$_debug_level >= 1) {
                 print "API->login = FALSE\n";
