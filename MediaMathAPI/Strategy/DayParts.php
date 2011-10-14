@@ -2,7 +2,8 @@
 
 class MediaMathAPI_Strategy_DayParts extends MediaMathAPI {
     public $method = 'strategy_day_parts';
-       
+    public $method_full = 'strategy_day_part';
+    
     public function fetchAll($strategy_id=0) {
 	$old_method = $this->method;
 	if ($strategy_id) {

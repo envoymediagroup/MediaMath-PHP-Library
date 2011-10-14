@@ -3,7 +3,7 @@
 class MediaMathAPI_TargetDimensions extends MediaMathAPI {
 
     public $method = 'target_dimensions';
-
+    
     public function fetchAll($type) {
 	if (is_numeric($type)) {
 	    $type_code = $type;

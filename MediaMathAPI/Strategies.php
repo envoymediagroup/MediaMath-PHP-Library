@@ -3,7 +3,8 @@
 class MediaMathAPI_Strategies extends MediaMathAPI {
 
     public $method = 'strategies';
-
+    public $method_full = 'strategy';
+    
     public function create($args) {
 	$flags = Array(
 	    'concepts' => false,
