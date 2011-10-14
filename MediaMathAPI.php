@@ -184,21 +184,33 @@ class MediaMathAPI {
 	return $this->prepareResponseSingle($response);
     }
 
-    public function fetchAll() {
+    public function fetchAll($args=Array()) {
+	if ($args['page_limit'] || $args['page_limit'] >  100) {
+	    $args['page_limit'] = 100;
+	}
+	if (!isset($args['page_offset'])) {
+	    $args['page_offset'] = 0;
+	}
 	$response = Array();
-	$response = $this->call($this->method, Array());
+	$response = $this->call($this->method, $args);
 	if (self::$_debug_level >= 1) {
 	    print "API->" . get_class($this) . "->fetchAll = " . print_r($response, true) . "\n";
 	}
 	return $this->prepareResponseMultiple($response);
     }
 
-    public function fetchAllDetail() {
+    public function fetchAllDetail($args=Array()) {
+	if ($args['page_limit'] || $args['page_limit'] >  100) {
+	    $args['page_limit'] = 100;
+	}
+	if (!isset($args['page_offset'])) {
+	    $args['page_offset'] = 0;
+	}
 	$response = Array();
 	if ($this->method_full) {
-	    $response = $this->call($this->method.'?full='.$this->method_full, Array());
+	    $response = $this->call($this->method.'?full='.$this->method_full, $args);
 	} else {
-	    $response = $this->call($this->method, Array());
+	    $response = $this->call($this->method, $args);
 	}
 	if (self::$_debug_level >= 1) {
 	    print "API->" . get_class($this) . "->fetchAllDetail = " . print_r($response, true) . "\n";
