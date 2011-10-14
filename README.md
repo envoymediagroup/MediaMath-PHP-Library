@@ -51,7 +51,7 @@ List all the current advertisers
 
     <?php
     $API = new MediaMathAPI();
-    $API->login('mm_api_username','mm_api_password');
+    $API->login('mm_api_username','mm_api_password','mm_api_key');
     print_r($API->Advertisers->fetchAll());
     ?>
 
@@ -60,7 +60,7 @@ List all the current advertisers with full details for each
 
     <?php
     $API = new MediaMathAPI();
-    $API->login('mm_api_username','mm_api_password');
+    $API->login('mm_api_username','mm_api_password','mm_api_key');
     print_r($API->Advertisers->fetchAllDetail());
     ?>
 
@@ -73,7 +73,7 @@ to learn more about all the objects and methods available.
 
     <?php
     $API = new MediaMathAPI();
-    $API->login('mm_api_username','mm_api_password');
+    $API->login('mm_api_username','mm_api_password','mm_api_key');
     $creative = Array(
         'status' => 'on',
         'name' => 'Test Creative 1',
@@ -102,7 +102,7 @@ the correct version number for you.
 
     <?php
     $API = new MediaMathAPI();
-    $API->login('mm_api_username','mm_api_password');
+    $API->login('mm_api_username','mm_api_password','mm_api_key');
     $creative = Array(
         'id' => 12345
         'status' => 'off',
