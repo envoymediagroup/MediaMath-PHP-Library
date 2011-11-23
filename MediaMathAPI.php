@@ -35,7 +35,10 @@ class MediaMathAPI {
     /* CONFIG - BEGIN */
 
     //The base url for the MediaMath API
+    //[SANDBOX]
     private static $_base = 'https://t1sandbox.mediamath.com/api/v1/'; //remember trailing slash
+    //[PRODUCTION]
+    //private static $_base = 'https://api.mediamath.com/api/v1/'; //remember the trailing slash
     //Folder where authentication cookies are stored
     private static $_cookie_folder = '/tmp/'; //remember trailing slash
     //If $_autoversion is set to true then the system will automatically
@@ -185,12 +188,10 @@ class MediaMathAPI {
     }
 
     public function fetchAll($args=Array()) {
-	if ($args['page_limit'] || $args['page_limit'] >  100) {
+	if ($args['page_limit'] || $args['page_limit'] > 100) {
 	    $args['page_limit'] = 100;
 	}
-	if (!isset($args['page_offset'])) {
-	    $args['page_offset'] = 0;
-	}
+
 	$response = Array();
 	$response = $this->call($this->method, $args);
 	if (self::$_debug_level >= 1) {
@@ -200,15 +201,13 @@ class MediaMathAPI {
     }
 
     public function fetchAllDetail($args=Array()) {
-	if ($args['page_limit'] || $args['page_limit'] >  100) {
+	if ($args['page_limit'] || $args['page_limit'] > 100) {
 	    $args['page_limit'] = 100;
 	}
-	if (!isset($args['page_offset'])) {
-	    $args['page_offset'] = 0;
-	}
+
 	$response = Array();
 	if ($this->method_full) {
-	    $response = $this->call($this->method.'?full='.$this->method_full, $args);
+	    $response = $this->call($this->method . '?full=' . $this->method_full, $args);
 	} else {
 	    $response = $this->call($this->method, $args);
 	}
@@ -333,9 +332,20 @@ class MediaMathAPI {
 	//more than 1 item!!
 	//Here we make sure that everything always goes into nice associative array with id as the key
 	if ($response['entities_attr']['count'] > 1) {
+	    $prop_flag = false;
 	    foreach ($response['entities']['entity'] as $key => $es) {
-		if (strpos($key, '_attr') !== false) {
-		    $new[$es['id']] = $es;
+		if (isset($es['prop'])) {
+		    $prop_flag = true;
+		    $my_id = $es['prop']['0_attr']['value']; //0 entry for respective id
+		    foreach ($es['prop'] as $key2 => $e) {
+			if (strpos($key2, '_attr') !== false) {
+			    $new[$my_id][$e['name']] = $e['value'];
+			}
+		    }
+		} elseif (!$prop_flag) {
+		    if (strpos($key, '_attr') !== false) {
+			$new[$es['id']] = $es;
+		    }
 		}
 	    }
 	} elseif ($response['entities_attr']['count'] == 1) {
