@@ -41,7 +41,7 @@ class MediaMathAPI {
     //private static $_base = 'https://api.mediamath.com/api/v1/'; //remember the trailing slash
     //Folder where authentication cookies are stored
     private static $_cookie_folder = '/tmp/'; //remember trailing slash
-    //If $_autoversion is set to true then the system will automatically
+    //If $_auto_version is set to true then the system will automatically
     //do an extra call to retrieve the "version" field when attempting to
     //modify a particular item IF version is not passed in $args
     private static $_auto_version = true;
