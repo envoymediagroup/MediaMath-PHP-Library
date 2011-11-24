@@ -50,6 +50,7 @@ class MediaMathAPI {
     protected static $_debug_level = -1;
     protected static $_auth = Array();
     protected static $_ch;
+    protected static $_filter = Array('type' => '', 'id' => '');
     public $AdServers;
 
     public function __construct($debug_level=0) {
@@ -75,6 +76,7 @@ class MediaMathAPI {
 	    $this->Advertisers = new MediaMathAPI_Advertisers();
 	    $this->Agencies = new MediaMathAPI_Agencies();
 	    $this->Campaigns = new MediaMathAPI_Campaigns();
+	    $this->Campaign_Watermarks = new MediaMathAPI_Campaign_Watermarks();
 	    $this->Concepts = new MediaMathAPI_Concepts();
 	    $this->Creatives = new MediaMathAPI_Creatives();
 	    $this->Organizations = new MediaMathAPI_Organizations();
@@ -92,6 +94,54 @@ class MediaMathAPI {
 
     public function setDebugLevel($debug_level=0) {
 	self::$_debug_level = $debug_level;
+    }
+
+    public function setFilter($type, $id) {
+	//This will filter all multi result calls to just the advertiser_id specified
+	self::$_filter = Array('type' => $type, 'id' => $id);
+    }
+
+    public function getFilter() {
+	//This will filter all multi result calls to just the advertiser_id specified
+	return self::$_filter;
+    }
+
+    public function getFilterPrefix($start, $end) {
+	//this will give us the appropriate filter for a limit lookup
+	$hierarchy = Array(
+	    'strategy' => Array(
+		'campaign', 'advertiser', 'agency', 'organization'
+	    ),
+	    'pixel_bundle' => Array(
+		'advertiser', 'agency', 'organization'
+	    ),
+	    'concept' => Array(
+		'advertiser', 'agency', 'organization'
+	    ),
+	    'campaign' => Array(
+		'advertiser', 'agency', 'organization'
+	    ),
+	    'advertiser' => Array(
+		'agency', 'organization'
+	    ),
+	    'agency' => Array(
+		'organization'
+	    )
+	);
+
+	if (!isset($hierarchy[$start])) {
+	    return '';
+	}
+
+	$prefix = $start.'.';
+	foreach ($hierarchy[$start] as $h) {
+	    if ($h == $end) {
+		break;
+	    }
+	    $prefix .= $h . '.';
+	}
+	
+	return $prefix;
     }
 
     public function login($username, $password, $api_key='') {
@@ -120,11 +170,12 @@ class MediaMathAPI {
 	}
     }
 
-    public function call($method, $args) {
+    public function call($method, $args=Array()) {
 	if ($method != 'login' && empty(self::$_auth)) {
 	    return Array('status' => "You must call login before $method");
 	}
 	$url = self::$_base . $method;
+
 	if (self::$_debug_level >= 1) {
 	    print "##############################################################\n";
 	    print "URL: $url\n";
@@ -158,6 +209,7 @@ class MediaMathAPI {
 	if (self::$_debug_level >= 1) {
 	    print "RESPONSE (XML):\n$xml\n";
 	}
+
 	$response = Array();
 	$response = $this->xml2array($xml, 1, $xml_priority);
 	$response = $response['result'];
@@ -188,55 +240,110 @@ class MediaMathAPI {
     }
 
     public function fetchAll($args=Array()) {
-	if ($args['page_limit'] || $args['page_limit'] > 100) {
+	if (!$args['page_limit'] || $args['page_limit'] > 100) {
 	    $args['page_limit'] = 100;
 	}
+	$all_items = false;
+	if (!isset($args['page_offset'])) {
+	    $args['page_offset'] = 0;
+	    $all_items = true;
+	}
+
+	if (!isset($args['sort_by'])) {
+	    $args['sort_by'] = 'id';
+	}
+
+	$args_str = '';
+	foreach ($args as $key => $val) {
+	    $args_str .= '&' . $key . '=' . urlencode($val);
+	}
+
+	$args_str = trim($args_str, '&');
 
 	$response = Array();
-	$response = $this->call($this->method, $args);
+	if (self::$_filter) {
+	    $filter = Array();
+	    $filter = self::$_filter;
+	    $filter_prefix = '';
+	    if ($this->parent && $filter['type'] != $this->parent) {
+		$filter_prefix = $this->getFilterPrefix($this->parent, $filter['type']);
+	    }
+	    $response = $this->call($this->method . '/limit/' . $filter_prefix . $filter['type'] . '=' . $filter['id'] . '?' . $args_str, Array());
+	} else {
+	    $response = $this->call($this->method . '?' . $args_str, Array());
+	}
+
+	$full_count = $response['entities_attr']['count'];
+
 	if (self::$_debug_level >= 1) {
 	    print "API->" . get_class($this) . "->fetchAll = " . print_r($response, true) . "\n";
 	}
-	return $this->prepareResponseMultiple($response);
+
+	$ret = Array();
+	$ret = $this->prepareResponseMultiple($response);
+
+	if ($all_items && count($ret['entities']) == $args['page_limit']) {
+	    do {
+		$ret2 = Array();
+		$args['page_offset'] += $args['page_limit'];
+		$ret2 = $this->fetchAll($args);
+		foreach ($ret2['entities'] as $eid => $e) {
+		    $ret['entities'][$eid] = $e;
+		}
+	    } while (count($ret['entities']) < $full_count);
+	}
+
+	return $ret;
     }
 
     public function fetchAllDetail($args=Array()) {
-	if ($args['page_limit'] || $args['page_limit'] > 100) {
+	if (!$args['page_limit'] || $args['page_limit'] > 100) {
 	    $args['page_limit'] = 100;
+	}
+	$all_items = false;
+	if (!isset($args['page_offset'])) {
+	    $args['page_offset'] = 0;
+	    $all_items = true;
+	}
+
+	if (!isset($args['sort_by'])) {
+	    $args['sort_by'] = 'id';
+	}
+
+	$args_str = '';
+	foreach ($args as $key => $val) {
+	    $args_str .= '&' . $key . '=' . urlencode($val);
 	}
 
 	$response = Array();
-	if ($this->method_full) {
-	    $response = $this->call($this->method . '?full=' . $this->method_full, $args);
+	if (self::$_advertiser_filter) {
+	    $response = $this->call($this->method . '/limit/advertiser=' . self::$_advertiser_filter . '?full=' . $this->method_full . $args_str, Array());
 	} else {
-	    $response = $this->call($this->method, $args);
+	    $response = $this->call($this->method . '?full=' . $this->method_full . $args_str, Array());
 	}
+
+
+	$full_count = $response['entities_attr']['count'];
+
 	if (self::$_debug_level >= 1) {
 	    print "API->" . get_class($this) . "->fetchAllDetail = " . print_r($response, true) . "\n";
 	}
 
-	if ($this->method_full) {
-	    return $this->prepareResponseMultiple($response);
-	} else {
-	    //expand the returned array with the details for each returned item
-	    $my_method = $this->method;
-	    if (strpos($my_method . '/limit/') !== false) {
-		$temp = Array();
-		$temp = explode('/', $my_method);
-		$my_method = $temp[0];
-	    }
-	    if ($response['entities_attr']['count'] > 1) {
-		foreach ($response['entities']['entity'] as $ekey => $e) {
-		    if (strpos($ekey, '_attr') !== false && $e['id']) {
+	$ret = Array();
+	$ret = $this->prepareResponseMultiple($response);
 
-			$response['entities']['entity'][$ekey]['detail'] = $this->prepareResponseSingle($this->call($my_method . '/' . $e['id'], Array()));
-		    }
+	if ($all_items && count($ret['entities']) == $args['page_limit']) {
+	    do {
+		$ret2 = Array();
+		$args['page_offset'] += $args['page_limit'];
+		$ret2 = $this->fetchAllDetail($args);
+		foreach ($ret2['entities'] as $eid => $e) {
+		    $ret['entities'][$eid] = $e;
 		}
-	    } elseif ($response['entities_attr']['count'] == 1) {
-		$response['entities']['entity_attr']['detail'] = $this->prepareResponseSingle($this->call($my_method . '/' . $response['entities']['entity_attr']['id'], Array()));
-	    }
-	    return $this->prepareResponseMultiple($response);
+	    } while (count($ret['entities']) < $full_count);
 	}
+
+	return $ret;
     }
 
     public function create($args) {
@@ -331,12 +438,15 @@ class MediaMathAPI {
 	//if you are going to return an array then do it everytime not just if there is
 	//more than 1 item!!
 	//Here we make sure that everything always goes into nice associative array with id as the key
-	if ($response['entities_attr']['count'] > 1) {
+	if (isset($response['entities']['entity'][0])) {
 	    $prop_flag = false;
 	    foreach ($response['entities']['entity'] as $key => $es) {
 		if (isset($es['prop'])) {
 		    $prop_flag = true;
-		    $my_id = $es['prop']['0_attr']['value']; //0 entry for respective id
+		    $attr = Array();
+		    $attr = $response['entities']['entity'][$key . '_attr'];
+		    $my_id = $attr['id'];
+		    $new[$my_id] = $attr;
 		    foreach ($es['prop'] as $key2 => $e) {
 			if (strpos($key2, '_attr') !== false) {
 			    $new[$my_id][$e['name']] = $e['value'];
@@ -348,9 +458,23 @@ class MediaMathAPI {
 		    }
 		}
 	    }
-	} elseif ($response['entities_attr']['count'] == 1) {
-	    $new[$response['entities']['entity_attr']['id']] = $response['entities']['entity_attr'];
+	} else {
+	    //single entity
+	    if (isset($response['entities']['entity']['prop'])) {
+		$attr = Array();
+		$attr = $response['entities']['entity_attr'];
+		$my_id = $attr['id'];
+		$new[$my_id] = $attr;
+		foreach ($response['entities']['entity']['prop'] as $key => $e) {
+		    if (strpos($key, '_attr') !== false) {
+			$new[$my_id][$e['name']] = $e['value'];
+		    }
+		}
+	    } else {
+		$new[$response['entities']['entity_attr']['id']] = $response['entities']['entity_attr'];
+	    }
 	}
+
 	$ret['entities'] = $new;
 	return $ret;
     }
@@ -407,8 +531,10 @@ class MediaMathAPI {
 	$opened_tags = array();
 	$arr = array();
 
-	$current = &$xml_array; //Refference
+	$current = &$xml_array; //Reference
 	//Go through the tags.
+	//print_r($xml_values);
+
 	$repeated_tag_index = array(); //Multiple tags with same name will be turned into an array
 	foreach ($xml_values as $data) {
 	    unset($attributes, $value); //Remove existing values, or there will be trouble
@@ -436,9 +562,17 @@ class MediaMathAPI {
 		}
 	    }
 
+	    $stop_flag = false;
+	    if ($attributes_data['id'] == 102625) {
+		print_r($data);
+		print_r($attributes_data);
+		$stop_flag = true;
+	    }
+
 	    //See tag status and do the needed.
 	    if ($type == "open") {//The starting of the tag '<tag>'
 		$parent[$level - 1] = &$current;
+
 		if (!is_array($current) or (!in_array($tag, array_keys($current)))) { //Insert New tag
 		    $current[$tag] = $result;
 		    if ($attributes_data)
@@ -449,6 +583,10 @@ class MediaMathAPI {
 		} else { //There was another element with the same tag name
 		    if (isset($current[$tag][0])) {//If there is a 0th element it is already an array
 			$current[$tag][$repeated_tag_index[$tag . '_' . $level]] = $result;
+			if ($attributes_data) {
+			    //put attributes in 1_attr
+			    $current[$tag][$repeated_tag_index[$tag . '_' . $level] . '_attr'] = $attributes_data;
+			}
 			$repeated_tag_index[$tag . '_' . $level]++;
 		    } else {//This section will make the value an array if multiple tags with the same name appear together
 			$current[$tag] = array($current[$tag], $result); //This will combine the existing item and the new item together to make an array
@@ -457,6 +595,11 @@ class MediaMathAPI {
 			if (isset($current[$tag . '_attr'])) { //The attribute of the last(0th) tag must be moved as well
 			    $current[$tag]['0_attr'] = $current[$tag . '_attr'];
 			    unset($current[$tag . '_attr']);
+			}
+
+			if ($attributes_data) {
+			    //put attributes in 1_attr
+			    $current[$tag]['1_attr'] = $attributes_data;
 			}
 		    }
 		    $last_item_index = $repeated_tag_index[$tag . '_' . $level] - 1;
@@ -498,7 +641,6 @@ class MediaMathAPI {
 		$current = &$parent[$level - 1];
 	    }
 	}
-
 	return($xml_array);
     }
 

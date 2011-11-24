@@ -3,6 +3,7 @@
 class MediaMathAPI_Creatives extends MediaMathAPI {
     public $method = 'atomic_creatives';
     public $method_full = 'atomic_creative';
+    public $parent = 'concept';
     
     public function delete($args) {
 	$args['status'] = 'off';
