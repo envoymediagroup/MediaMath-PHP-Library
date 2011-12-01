@@ -36,15 +36,22 @@ class MediaMathAPI {
 
     //The base url for the MediaMath API
     //[SANDBOX]
-    private static $_base = 'https://t1sandbox.mediamath.com/api/v1/'; //remember trailing slash
+    //private static $_base = 'https://t1sandbox.mediamath.com/api/v1/'; //remember trailing slash
     //[PRODUCTION]
-    //private static $_base = 'https://api.mediamath.com/api/v1/'; //remember the trailing slash
+    private static $_base = 'https://api.mediamath.com/api/v1/'; //remember the trailing slash
     //Folder where authentication cookies are stored
     private static $_cookie_folder = '/tmp/'; //remember trailing slash
     //If $_auto_version is set to true then the system will automatically
     //do an extra call to retrieve the "version" field when attempting to
     //modify a particular item IF version is not passed in $args
     private static $_auto_version = true;
+    //If $_auto_version_conflict is set to true then the system will automatically
+    //do an extra call to retrieve the "version" field when attempting to
+    //modify a particular item IF an attept at modification returned a Version Conflict message
+    //Some could argue this defeats the purpose of having version at all, but if you have
+    //a system where you know there is only 1 way a modification can be made and you want to
+    //be lazy about your version checking this variable will be one of your favorites.
+    private static $_auto_version_conflict = true;
 
     /* CONFIG - END */
     protected static $_debug_level = -1;
@@ -96,9 +103,9 @@ class MediaMathAPI {
 	self::$_debug_level = $debug_level;
     }
 
-    public function setFilter($type, $id) {
+    public function setFilter($type, $id, $persist=false) {
 	//This will filter all multi result calls to just the advertiser_id specified
-	self::$_filter = Array('type' => $type, 'id' => $id);
+	self::$_filter = Array('type' => $type, 'id' => $id, 'persist' => $persist);
     }
 
     public function getFilter() {
@@ -133,14 +140,14 @@ class MediaMathAPI {
 	    return '';
 	}
 
-	$prefix = $start.'.';
+	$prefix = $start . '.';
 	foreach ($hierarchy[$start] as $h) {
 	    if ($h == $end) {
 		break;
 	    }
 	    $prefix .= $h . '.';
 	}
-	
+
 	return $prefix;
     }
 
@@ -269,6 +276,9 @@ class MediaMathAPI {
 		$filter_prefix = $this->getFilterPrefix($this->parent, $filter['type']);
 	    }
 	    $response = $this->call($this->method . '/limit/' . $filter_prefix . $filter['type'] . '=' . $filter['id'] . '?' . $args_str, Array());
+	    if (!$filter['persist']) {
+		self::$_filter = Array();
+	    }
 	} else {
 	    $response = $this->call($this->method . '?' . $args_str, Array());
 	}
@@ -316,8 +326,17 @@ class MediaMathAPI {
 	}
 
 	$response = Array();
-	if (self::$_advertiser_filter) {
-	    $response = $this->call($this->method . '/limit/advertiser=' . self::$_advertiser_filter . '?full=' . $this->method_full . $args_str, Array());
+	if (self::$_filter) {
+	    $filter = Array();
+	    $filter = self::$_filter;
+	    $filter_prefix = '';
+	    if ($this->parent && $filter['type'] != $this->parent) {
+		$filter_prefix = $this->getFilterPrefix($this->parent, $filter['type']);
+	    }
+	    $response = $this->call($this->method . '/limit/' . $filter_prefix . $filter['type'] . '=' . $filter['id'] . '?full=' . $this->method_full . $args_str, Array());
+	    if (!$filter['persist']) {
+		self::$_filter = Array();
+	    }
 	} else {
 	    $response = $this->call($this->method . '?full=' . $this->method_full . $args_str, Array());
 	}
@@ -371,19 +390,28 @@ class MediaMathAPI {
 	    print "API->" . get_class($this) . "->modify = " . print_r($response, true) . "\n";
 	}
 
-	return $this->prepareResponseSingle($response);
-    }
+	$ret = Array();
+	$ret = $this->prepareResponseSingle($response);
 
-    public function delete($args) {
-	if (!isset($args['version']) && self::$_auto_version) {
-	    //get the current version
+	if (self::$_auto_version_conflict && $ret['status']['code'] == 'conflict' && strpos($ret['status']['detail'], 'Version') !== false) {
 	    $temp = Array();
 	    $temp = $this->fetch($args['id']);
 	    if (isset($temp['entity']['version'])) {
 		$args['version'] = $temp['entity']['version'];
 	    }
+	    $response = Array();
+	    $response = $this->call($this->method . '/' . $args['id'], $args);
+	    if (self::$_debug_level >= 1) {
+		print "API->" . get_class($this) . "->modify = " . print_r($response, true) . "\n";
+	    }
+	    $ret = Array();
+	    $ret = $this->prepareResponseSingle($response);
 	}
 
+	return $ret;
+    }
+
+    public function delete($args) {
 	$response = Array();
 	$response = $this->call($this->method . '/' . $args['id'] . '/delete', $args);
 	if (self::$_debug_level >= 1) {
@@ -417,7 +445,7 @@ class MediaMathAPI {
 		$entity['version'] = $response['entity_attr']['version'];
 	    }
 	} else {
-	    $entity = $response['entity_attr'];
+	    $entity = Array();
 	    $ret['errors'] = $this->prepareErrors($response);
 	}
 	$ret['entity'] = $entity;
@@ -438,43 +466,46 @@ class MediaMathAPI {
 	//if you are going to return an array then do it everytime not just if there is
 	//more than 1 item!!
 	//Here we make sure that everything always goes into nice associative array with id as the key
-	if (isset($response['entities']['entity'][0])) {
-	    $prop_flag = false;
-	    foreach ($response['entities']['entity'] as $key => $es) {
-		if (isset($es['prop'])) {
-		    $prop_flag = true;
-		    $attr = Array();
-		    $attr = $response['entities']['entity'][$key . '_attr'];
-		    $my_id = $attr['id'];
-		    $new[$my_id] = $attr;
-		    foreach ($es['prop'] as $key2 => $e) {
-			if (strpos($key2, '_attr') !== false) {
-			    $new[$my_id][$e['name']] = $e['value'];
+	if ($ret['status']['code'] == 'ok' && $response['entities_attr']['count'] > 0) {
+	    if (isset($response['entities']['entity'][0])) {
+		$prop_flag = false;
+		foreach ($response['entities']['entity'] as $key => $es) {
+		    if (isset($es['prop'])) {
+			$prop_flag = true;
+			$attr = Array();
+			$attr = $response['entities']['entity'][$key . '_attr'];
+			$my_id = $attr['id'];
+			$new[$my_id] = $attr;
+			foreach ($es['prop'] as $key2 => $e) {
+			    if (strpos($key2, '_attr') !== false) {
+				$new[$my_id][$e['name']] = $e['value'];
+			    }
 			}
-		    }
-		} elseif (!$prop_flag) {
-		    if (strpos($key, '_attr') !== false) {
-			$new[$es['id']] = $es;
-		    }
-		}
-	    }
-	} else {
-	    //single entity
-	    if (isset($response['entities']['entity']['prop'])) {
-		$attr = Array();
-		$attr = $response['entities']['entity_attr'];
-		$my_id = $attr['id'];
-		$new[$my_id] = $attr;
-		foreach ($response['entities']['entity']['prop'] as $key => $e) {
-		    if (strpos($key, '_attr') !== false) {
-			$new[$my_id][$e['name']] = $e['value'];
+		    } elseif (!$prop_flag) {
+			if (strpos($key, '_attr') !== false) {
+			    $new[$es['id']] = $es;
+			}
 		    }
 		}
 	    } else {
-		$new[$response['entities']['entity_attr']['id']] = $response['entities']['entity_attr'];
+		//single entity
+		if (isset($response['entities']['entity']['prop'])) {
+		    $attr = Array();
+		    $attr = $response['entities']['entity_attr'];
+		    $my_id = $attr['id'];
+		    $new[$my_id] = $attr;
+		    foreach ($response['entities']['entity']['prop'] as $key => $e) {
+			if (strpos($key, '_attr') !== false) {
+			    $new[$my_id][$e['name']] = $e['value'];
+			}
+		    }
+		} else {
+		    $new[$response['entities']['entity_attr']['id']] = $response['entities']['entity_attr'];
+		}
 	    }
+	} else {
+	    $new = Array();
 	}
-
 	$ret['entities'] = $new;
 	return $ret;
     }

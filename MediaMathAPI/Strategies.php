@@ -37,8 +37,8 @@ class MediaMathAPI_Strategies extends MediaMathAPI {
 	    unset($args['target_dimensions']);
 	    $flags['target_dimensions'] = true;
 	}
-	$response = Array();
-	$response = parent::create($args);
+	$orig_response = Array();
+	$orig_response = parent::create($args);
 	if ($orig_response['status']['code'] == 'ok' && $orig_response['entity']['id']) {
 	    $strategy_id = $orig_response['entity']['id'];
 
