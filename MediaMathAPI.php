@@ -275,7 +275,7 @@ class MediaMathAPI {
 	    if ($this->parent && $filter['type'] != $this->parent) {
 		$filter_prefix = $this->getFilterPrefix($this->parent, $filter['type']);
 	    }
-	    $response = $this->call($this->method . '/limit/' . $filter_prefix . $filter['type'] . '=' . $filter['id'] . '?' . $args_str, Array());
+	    $response = $this->call($this->method . '/limit/' . $filter_prefix . $filter['type'] . $filter['id'] . '?' . $args_str, Array());
 	    if (!$filter['persist']) {
 		self::$_filter = Array();
 	    }
